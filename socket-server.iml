@@ -45,8 +45,10 @@
     <orderEntry type="library" name="Leiningen: compojure:1.6.0" level="project" />
     <orderEntry type="library" name="Leiningen: crypto-equality:1.0.0" level="project" />
     <orderEntry type="library" name="Leiningen: crypto-random:1.2.0" level="project" />
+    <orderEntry type="library" name="Leiningen: fipp:0.6.10" level="project" />
     <orderEntry type="library" name="Leiningen: gloss:0.2.6" level="project" />
     <orderEntry type="library" name="Leiningen: hiccup:1.0.5" level="project" />
+    <orderEntry type="library" name="Leiningen: hickory:0.7.1" level="project" />
     <orderEntry type="library" name="Leiningen: instaparse:1.4.0" level="project" />
     <orderEntry type="library" name="Leiningen: io.aleph/dirigiste:0.1.5" level="project" />
     <orderEntry type="library" name="Leiningen: io.aviso/pretty:0.1.33" level="project" />
@@ -55,12 +57,15 @@
     <orderEntry type="library" name="Leiningen: joda-time:2.8.2" level="project" />
     <orderEntry type="library" name="Leiningen: manifold:0.1.6" level="project" />
     <orderEntry type="library" name="Leiningen: medley:1.0.0" level="project" />
+    <orderEntry type="library" name="Leiningen: mvxcvi/arrangement:1.1.1" level="project" />
+    <orderEntry type="library" name="Leiningen: mvxcvi/puget:1.0.2" level="project" />
     <orderEntry type="library" name="Leiningen: ns-tracker:0.3.1" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/clojure:1.10.0-alpha4" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/clojurescript:1.9.946" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/core.async:0.4.474" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/core.cache:0.6.5" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/core.memoize:0.5.9" level="project" />
+    <orderEntry type="library" name="Leiningen: org.clojure/core.rrb-vector:0.0.11" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/core.specs.alpha:0.1.24" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/data.json:0.2.6" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/data.priority-map:0.0.7" level="project" />
@@ -80,11 +85,13 @@
     <orderEntry type="library" name="Leiningen: org.eclipse.jetty/jetty-server:9.2.21.v20170120" level="project" />
     <orderEntry type="library" name="Leiningen: org.eclipse.jetty/jetty-util:9.2.21.v20170120" level="project" />
     <orderEntry type="library" name="Leiningen: org.javassist/javassist:3.18.1-GA" level="project" />
+    <orderEntry type="library" name="Leiningen: org.jsoup/jsoup:1.9.2" level="project" />
     <orderEntry type="library" name="Leiningen: org.mozilla/rhino:1.7R5" level="project" />
     <orderEntry type="library" name="Leiningen: org.msgpack/msgpack:0.6.12" level="project" />
     <orderEntry type="library" name="Leiningen: org.ow2.asm/asm-all:4.2" level="project" />
     <orderEntry type="library" name="Leiningen: potemkin:0.4.3" level="project" />
     <orderEntry type="library" name="Leiningen: primitive-math:0.1.5" level="project" />
+    <orderEntry type="library" name="Leiningen: quoin:0.1.2" level="project" />
     <orderEntry type="library" name="Leiningen: riddley:0.1.14" level="project" />
     <orderEntry type="library" name="Leiningen: ring/ring-anti-forgery:1.1.0" level="project" />
     <orderEntry type="library" name="Leiningen: ring/ring-codec:1.0.1" level="project" />
@@ -96,5 +103,6 @@
     <orderEntry type="library" name="Leiningen: ring/ring-servlet:1.6.3" level="project" />
     <orderEntry type="library" name="Leiningen: ring/ring-ssl:0.3.0" level="project" />
     <orderEntry type="library" name="Leiningen: ring:1.6.3" level="project" />
+    <orderEntry type="library" name="Leiningen: viebel/codox-klipse-theme:0.0.1" level="project" />
   </component>
 </module>

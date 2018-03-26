@@ -6,49 +6,47 @@
            (java.io OutputStreamWriter)
            (clojure.lang LineNumberingPushbackReader)))
 
-(defn start
-  [opts]
-  (clj-server/start-server opts))
-
 (defn send-code
   [code-writer clj-code]
   (binding [*out* code-writer]
     (prn clj-code)
     (flush)))
 
-(defn repl
+(defn prepl
   [{:keys [host port]}]
-  (let [client (Socket. ^String host ^Integer port)
+  (let [client        (Socket. ^String host ^Integer port)
         server-reader (LineNumberingPushbackReader. (io/reader client))
         server-writer (OutputStreamWriter. (io/output-stream client))]
     [server-reader server-writer]))
 
-(defn eval-form
-  [opts form]
-  (let [_ (start opts)
-        [r w] (repl opts)
-        _ (send-code w form)
-        response (read r)
-        _ (clj-server/stop-servers)]
-    response))
-
-(def socket-opts
+(def ^:private socket-opts
   {:port          9080
-   :name          "apropos"
    :server-daemon false
    :accept        'clojure.core.server/io-prepl})
 
-(defn send-form
-  [form]
-  (clj-server/stop-servers)
-  (eval-form socket-opts (edn/read-string form)))
+(defn shared-eval
+  [repl form]
+  (send-code (:writer repl) form)
+  (read (:reader repl)))
 
+(defn stop-shared-prepl
+  [prepl]
+  ; TODO we do this to clobber all existing servers - could be more finessed ;-)
+  (clj-server/stop-servers))
+
+(defn shared-prepl
+  [opts]
+  ; TODO we do this to clobber all existing servers - could be more finessed ;-)
+  (clj-server/stop-servers)
+  ; TODO the caller uses an atom to hold the server for future use, we could do that
+  (clj-server/start-server (merge socket-opts opts))
+
+  (let [[prepl-reader prepl-writer] (prepl socket-opts)]
+    {:reader prepl-reader :writer prepl-writer}))
 
 ;; hook web sockets in
 
-
 ;; then hook core.async
-
 
 ;; then make things nice
 

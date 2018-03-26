@@ -11,19 +11,18 @@
             [aleph.http :as aleph]
             [taoensso.sente.server-adapters.aleph :refer (get-sch-adapter)]
             [taoensso.sente.packers.transit :as sente-transit]
-
-            [socket-server.socket-repl :as repl]))
+            [puget.printer :as puget]
+            [hickory.core :as hickory]
+            [socket-server.socket-repl :as repl]
+            [clojure.edn :as edn]))
 
 ;; (timbre/set-level! :trace) ; Uncomment for more logging
 (reset! sente/debug-mode?_ true)                            ; Uncomment for extra debug info
 
-;; We use this to connect uids to socket REPL connections
-(def uids->repl (atom {}))
-
 ;;;; Define our Sente channel socket (chsk) server
 
 (let [;; Serializtion format, must use same val for client + server:
-      packer (sente-transit/get-transit-packer)
+      packer      (sente-transit/get-transit-packer)
       chsk-server (sente/make-channel-socket-server! (get-sch-adapter) {:packer packer})
       {:keys [ch-recv send-fn connected-uids ajax-post-fn ajax-get-or-ws-handshake-fn]} chsk-server]
 
@@ -34,42 +33,12 @@
   (def connected-uids connected-uids)                       ; Watchable, read-only atom
   )
 
-;; We can watch this atom for changes if we like
-(add-watch connected-uids :connected-uids
-           (fn [_ _ old new]
-             (when (not= old new)
-               (infof "Connected uids change: %s" new)
-               (infof "We are going to (un)map a REPL connection here"))))
+;; The standard Sente approach uses Ring to authenticate but we want to use WS
+(def connected-users (atom {:editors     ["eric" "mia" "mike" "ray"]
+                            :session-key "apropos"}))
+
 
 ;;;; Ring handlers
-
-(defn landing-pg-handler [ring-req]
-  (hiccup/html
-    [:textarea#output {:style "width: 100%; height: 200px;"}]
-    [:p
-     [:input#repl-input-eric {:type :text :placeholder "(eric clojure here)"}]
-     [:button#btn-repl-eric {:type "button"} "Eval"]]
-    [:p
-     [:input#repl-input-mia {:type :text :placeholder "(mia clojure here)"}]
-     [:button#btn-repl-mia {:type "button"} "Eval"]]
-    [:p
-     [:input#repl-input-mike {:type :text :placeholder "(mike clojure here)"}]
-     [:button#btn-repl-mike {:type "button"} "Eval"]]
-    [:p
-     [:input#repl-input-ray {:type :text :placeholder "(ray clojure here)"}]
-     [:button#btn-repl-ray {:type "button"} "Eval"]]
-    [:p
-     [:button#btn5 {:type "button"} "Disconnect"]
-     [:button#btn6 {:type "button"} "Reconnect"]]
-    ;;
-    ;[:hr]
-    ;[:h2 "Step 3: try login with a user-id"]
-    ;[:p "The server can use this id to send events to *you* specifically."]
-    ;[:p
-    ; [:input#input-login {:type :text :placeholder "User-id"}]
-    ; [:button#btn-login {:type "button"} "Secure login!"]]
-    ;;
-    [:script {:src "main.js"}]))
 
 (defn login-handler
   "Here's where you'll add your server-side login/auth procedure (Friend, etc.).
@@ -82,11 +51,9 @@
     {:status 200 :session (assoc session :uid user-id)}))
 
 (defroutes ring-routes
-           (GET "/" ring-req (landing-pg-handler ring-req))
            (GET "/chsk" ring-req (ring-ajax-get-or-ws-handshake ring-req))
            (POST "/chsk" ring-req (ring-ajax-post ring-req))
            (POST "/login" ring-req (login-handler ring-req))
-           (route/resources "/")                            ; Static files, notably public/main.js (our cljs target)
            (route/not-found "<h1>Page not found</h1>"))
 
 (def main-ring-handler
@@ -150,7 +117,7 @@
   :default                                                  ; Default/fallback case (no other matching handler)
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (let [session (:session ring-req)
-        uid (:uid session)]
+        uid     (:uid session)]
     (debugf "Unhandled event: %s" event)
     (when ?reply-fn
       (?reply-fn {:umatched-event-as-echoed-from-from-server event}))))
@@ -166,11 +133,92 @@
 
 ;; TODO Add your (defmethod -event-msg-handler <event-id> [ev-msg] <body>)s here...
 
-(defmethod -event-msg-handler :example/repl
-  [{:keys [?reply-fn ?data]}]
-  (when-let [response (repl/send-form (:form ?data))]
-    (debugf "Response for: %s" (or (:user ?data) "unknown"))
-    (?reply-fn response)))
+;;;;;;;;;;; REPL
+
+(defmethod -event-msg-handler :reptile/keystrokes
+  [{:keys [?data client-id]}]
+  (doseq [uid (:any @connected-uids)]
+    ; TODO ... need to look into the whole reply-fn stuff
+    (chsk-send! uid [:fast-push/keystrokes ?data])))
+
+(def shared-repl (atom nil))
+
+
+(defn colorize
+  [edn-form]
+  (puget/cprint-str edn-form {:color-markup :html-inline}))
+
+(defn as-hiccup
+  [html-form]
+  (map hickory/as-hiccup (hickory/parse-fragment html-form)))
+
+(defn pretty-form
+  [edn-form]
+  (pr-str (as-hiccup (colorize edn-form))))
+
+(defmethod -event-msg-handler :reptile/repl
+  [{:keys [?data]}]
+  (let [prepl      (or @shared-repl (reset! shared-repl (repl/shared-prepl {:name "reptile"})))
+        input-form (try (edn/read-string (:form ?data))
+                        (catch Exception e {:exception (str "Exception: " (.getMessage e) " - check parens!")}))]
+    (let [response   (if-not (:exception input-form)
+                       (repl/shared-eval prepl input-form)
+                       {:tag :ret, :val (:exception input-form), :form (:form ?data)})
+          prettified (when-not (:exception input-form)
+                       (assoc response :pretty (pretty-form input-form)))]
+
+      (doseq [uid (:any @connected-uids)]
+        ; TODO ... need to look into the whole reply-fn stuff
+        (chsk-send! uid [:fast-push/eval (or prettified response)])))))
+
+(defn shutdown-repl
+  [repl]
+  ;; TODO eventually shutdown the incoming REPL, now just shut all
+
+  )
+
+;;;;;;;;;;; LOGIN
+
+;; We can watch this atom for changes if we like
+(add-watch connected-uids :connected-uids
+           (fn [_ _ old new]
+             (when (not= old new)
+               (infof "Connected uids change: %s" new)
+               (infof "We are going to (un)map a REPL connection here"))))
+
+(add-watch connected-users :connected-users
+           (fn [_ _ old new]
+             (when (not= old new)
+               (let [curr-users (get-in new [:reptile :clients])
+                     prev-users (get-in old [:reptile :clients])]
+                 (println "Current users" curr-users)
+                 (println "Previous users" prev-users)
+                 (doseq [uid (:any @connected-uids)]
+                   ; TODO ... need to look into the whole reply-fn stuff
+                   (chsk-send! uid [:fast-push/editors curr-users]))))))
+
+(defn register-uid [state uid send-fn]
+  (assoc-in state [:clients uid :send-fn] (partial send-fn uid)))
+
+(defn register-user [state user client-id]
+  (let [kw-user (keyword user)]
+    (assoc-in state [:reptile :clients kw-user :client-id] client-id)))
+
+(defn deregister-user [state user]
+  (let [kw-user (keyword user)]
+    (update-in state [:reptile :clients] dissoc kw-user)))
+
+(defn auth [{:keys [client-id ?data ?reply-fn state]}]
+  (if-let [user (:proposed-user ?data)]
+    (do
+      (swap! state register-user user client-id)
+      (?reply-fn :login-ok))
+    (?reply-fn :login-failed)))
+
+(defmethod -event-msg-handler :reptile/login
+  [ev-msg]
+  (async/thread
+    (auth (assoc ev-msg :state connected-users))))
 
 ;;;; Sente event router (our `event-msg-handler` loop)
 
@@ -191,28 +239,21 @@
 (defn stop-web-server! [] (when-let [stop-fn @web-server_] (stop-fn)))
 (defn start-web-server! [& [port]]
   (stop-web-server!)
-  (let [port (or port 0)                                    ; 0 => Choose any available port
+  (let [port         (or port 0)                            ; 0 => Choose any available port
         ring-handler (var main-ring-handler)
 
         [port stop-fn]
         (let [server (aleph/start-server ring-handler {:port port})
-              p (promise)]
+              p      (promise)]
           (future @p)                                       ; Workaround for Ref. https://goo.gl/kLvced
           [(aleph.netty/port server)
            (fn [] (.close ^java.io.Closeable server) (deliver p nil))])
 
-        uri (format "http://localhost:%s/" port)]
+        uri          (format "http://localhost:%s/" port)]
 
     (infof "Web server is running at `%s`" uri)
-    (try (.browse (java.awt.Desktop/getDesktop)
-                  (java.net.URI. uri))
-         (catch java.awt.HeadlessException _))
 
     (reset! web-server_ stop-fn)))
-
-(defn start-prepl []
-
-  )
 
 (defn stop! []
   (stop-router!)
@@ -220,7 +261,7 @@
 
 (defn start! []
   (start-router!)
-  (start-web-server!)
+  (start-web-server! 9090)
   ;(start-example-broadcaster!) ; turn this off - instead we will follow other users
   )
 

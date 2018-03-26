@@ -22,7 +22,7 @@
                  [ring/ring-defaults "0.3.1"]               ; Includes `ring-anti-forgery`, etc.
                  [hiccup "1.0.5"]                           ; Optional, just for HTML
 
-                 [mvxcvi/puget "1.0.2"]
+                 [venantius/glow "0.1.5"]
                  [hickory "0.7.1"]
 
                  ;;; Transit deps optional; may be used to aid perf. of larger data payloads

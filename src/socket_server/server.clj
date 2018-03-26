@@ -11,7 +11,7 @@
             [aleph.http :as aleph]
             [taoensso.sente.server-adapters.aleph :refer (get-sch-adapter)]
             [taoensso.sente.packers.transit :as sente-transit]
-            [puget.printer :as puget]
+            [glow.core :as glow :refer [highlight-html]]
             [hickory.core :as hickory]
             [socket-server.socket-repl :as repl]
             [clojure.edn :as edn]))
@@ -22,7 +22,7 @@
 ;;;; Define our Sente channel socket (chsk) server
 
 (let [;; Serializtion format, must use same val for client + server:
-      packer      (sente-transit/get-transit-packer)
+      packer (sente-transit/get-transit-packer)
       chsk-server (sente/make-channel-socket-server! (get-sch-adapter) {:packer packer})
       {:keys [ch-recv send-fn connected-uids ajax-post-fn ajax-get-or-ws-handshake-fn]} chsk-server]
 
@@ -117,7 +117,7 @@
   :default                                                  ; Default/fallback case (no other matching handler)
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (let [session (:session ring-req)
-        uid     (:uid session)]
+        uid (:uid session)]
     (debugf "Unhandled event: %s" event)
     (when ?reply-fn
       (?reply-fn {:umatched-event-as-echoed-from-from-server event}))))
@@ -143,29 +143,24 @@
 
 (def shared-repl (atom nil))
 
-
-(defn colorize
-  [edn-form]
-  (puget/cprint-str edn-form {:color-markup :html-inline}))
-
-(defn as-hiccup
-  [html-form]
-  (map hickory/as-hiccup (hickory/parse-fragment html-form)))
-
 (defn pretty-form
   [edn-form]
-  (pr-str (as-hiccup (colorize edn-form))))
+  (pr-str
+    (map hickory/as-hiccup
+         (hickory/parse-fragment
+           (highlight-html edn-form)))))
 
 (defmethod -event-msg-handler :reptile/repl
   [{:keys [?data]}]
-  (let [prepl      (or @shared-repl (reset! shared-repl (repl/shared-prepl {:name "reptile"})))
+  (let [prepl (or @shared-repl (reset! shared-repl (repl/shared-prepl {:name "reptile"})))
         input-form (try (edn/read-string (:form ?data))
-                        (catch Exception e {:exception (str "Exception: " (.getMessage e) " - check parens!")}))]
-    (let [response   (if-not (:exception input-form)
-                       (repl/shared-eval prepl input-form)
-                       {:tag :ret, :val (:exception input-form), :form (:form ?data)})
-          prettified (when-not (:exception input-form)
-                       (assoc response :pretty (pretty-form input-form)))]
+                        (catch Exception e {:read-exception
+                                            (str "Exception: " (.getMessage e) " - check parens!")}))]
+    (let [response (if-not (:read-exception input-form)
+                     (repl/shared-eval prepl input-form)
+                     {:tag :ret, :val (:read-exception input-form), :form (:form ?data)})
+          prettified (when-not (:read-exception input-form)
+                       (assoc response :pretty (pretty-form (:form ?data))))]
 
       (doseq [uid (:any @connected-uids)]
         ; TODO ... need to look into the whole reply-fn stuff
@@ -239,17 +234,17 @@
 (defn stop-web-server! [] (when-let [stop-fn @web-server_] (stop-fn)))
 (defn start-web-server! [& [port]]
   (stop-web-server!)
-  (let [port         (or port 0)                            ; 0 => Choose any available port
+  (let [port (or port 0)                                    ; 0 => Choose any available port
         ring-handler (var main-ring-handler)
 
         [port stop-fn]
         (let [server (aleph/start-server ring-handler {:port port})
-              p      (promise)]
+              p (promise)]
           (future @p)                                       ; Workaround for Ref. https://goo.gl/kLvced
           [(aleph.netty/port server)
            (fn [] (.close ^java.io.Closeable server) (deliver p nil))])
 
-        uri          (format "http://localhost:%s/" port)]
+        uri (format "http://localhost:%s/" port)]
 
     (infof "Web server is running at `%s`" uri)
 

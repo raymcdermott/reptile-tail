@@ -153,14 +153,15 @@
 (defmethod -event-msg-handler :reptile/repl
   [{:keys [?data]}]
   (let [prepl (or @shared-repl (reset! shared-repl (repl/shared-prepl {:name "reptile"})))
-        input-form (try (edn/read-string (:form ?data))
+        input-form (try (read-string (:form ?data))
                         (catch Exception e {:read-exception
                                             (str "Exception: " (.getMessage e) " - check parens!")}))]
     (let [response (if-not (:read-exception input-form)
                      (repl/shared-eval prepl input-form)
                      {:tag :ret, :val (:read-exception input-form), :form (:form ?data)})
           prettified (when-not (:read-exception input-form)
-                       (assoc response :pretty (pretty-form (:form ?data))))]
+                       (assoc response :pretty (pretty-form (:form ?data))
+                                       :original-form (:form ?data)))]
 
       (doseq [uid (:any @connected-uids)]
         ; TODO ... need to look into the whole reply-fn stuff

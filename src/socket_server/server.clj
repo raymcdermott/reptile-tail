@@ -204,8 +204,11 @@
   (let [kw-user (keyword user)]
     (update-in state [:reptile :clients] dissoc kw-user)))
 
+;;
+;; check for a shared secret (get-in ?data [:proposed-user :secret])
+
 (defn auth [{:keys [client-id ?data ?reply-fn state]}]
-  (if-let [user (:proposed-user ?data)]
+  (if-let [user (get-in ?data [:proposed-user :user])]
     (do
       (swap! state register-user user client-id)
       (?reply-fn :login-ok))

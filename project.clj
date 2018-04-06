@@ -1,4 +1,4 @@
-(defproject socket-server "0.1.0-SNAPSHOT"
+(defproject reptile-server "0.1.0-SNAPSHOT"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
@@ -10,18 +10,19 @@
                 *assert*             true}
 
   :dependencies [[org.clojure/clojure "1.10.0-alpha4"]
-                 [org.clojure/clojurescript "1.9.946"]
+                 [org.clojure/clojurescript "1.9.946"]      ; not needed
                  [org.clojure/core.async "0.4.474"]
                  [org.clojure/tools.logging "0.4.0"]
                  [aleph "0.4.4"]
                  [gloss "0.2.6"]
-                 [compojure "1.6.0"]
+                 [compojure "1.6.0"]                        ; not needed
                  [com.taoensso/sente "1.12.0"]
                  [com.taoensso/timbre "4.10.0"]
                  [ring "1.6.3"]
                  [ring/ring-defaults "0.3.1"]               ; Includes `ring-anti-forgery`, etc.
                  [hiccup "1.0.5"]                           ; Optional, just for HTML
 
+                 ;; Make code look nice
                  [venantius/glow "0.1.5"]
                  [hickory "0.7.1"]
 

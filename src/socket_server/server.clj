@@ -22,7 +22,7 @@
 ;;;; Define our Sente channel socket (chsk) server
 
 (let [;; Serializtion format, must use same val for client + server:
-      packer (sente-transit/get-transit-packer)
+      packer      (sente-transit/get-transit-packer)
       chsk-server (sente/make-channel-socket-server! (get-sch-adapter) {:packer packer})
       {:keys [ch-recv send-fn connected-uids ajax-post-fn ajax-get-or-ws-handshake-fn]} chsk-server]
 
@@ -36,7 +36,6 @@
 ;; The standard Sente approach uses Ring to authenticate but we want to use WS
 (def connected-users (atom {:editors     ["eric" "mia" "mike" "ray"]
                             :session-key "apropos"}))
-
 
 ;;;; Ring handlers
 
@@ -117,7 +116,7 @@
   :default                                                  ; Default/fallback case (no other matching handler)
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (let [session (:session ring-req)
-        uid (:uid session)]
+        uid     (:uid session)]
     (debugf "Unhandled event: %s" event)
     (when ?reply-fn
       (?reply-fn {:umatched-event-as-echoed-from-from-server event}))))
@@ -136,10 +135,11 @@
 ;;;;;;;;;;; REPL
 
 (defmethod -event-msg-handler :reptile/keystrokes
-  [{:keys [?data client-id]}]
-  (doseq [uid (:any @connected-uids)]
-    ; TODO ... need to look into the whole reply-fn stuff
-    (chsk-send! uid [:fast-push/keystrokes ?data])))
+  [{:keys [?data]}]
+  (let [shared-data {:form (:form ?data) :user (:user-name ?data)}]
+    (doseq [uid (:any @connected-uids)]
+      ; TODO ... need to look into the whole reply-fn stuff
+      (chsk-send! uid [:fast-push/keystrokes shared-data]))))
 
 (def shared-repl (atom nil))
 
@@ -152,13 +152,13 @@
 
 (defmethod -event-msg-handler :reptile/repl
   [{:keys [?data]}]
-  (let [prepl (or @shared-repl (reset! shared-repl (repl/shared-prepl {:name "reptile"})))
+  (let [prepl      (or @shared-repl (reset! shared-repl (repl/shared-prepl {:name "reptile"})))
         input-form (try (read-string (:form ?data))
                         (catch Exception e {:read-exception
                                             (str "Exception: " (.getMessage e) " - check parens!")}))]
-    (let [response (if-not (:read-exception input-form)
-                     (repl/shared-eval prepl input-form)
-                     {:tag :ret, :val (:read-exception input-form), :form (:form ?data)})
+    (let [response   (if-not (:read-exception input-form)
+                       (repl/shared-eval prepl input-form)
+                       {:tag :ret, :val (:read-exception input-form), :form (:form ?data)})
           prettified (when-not (:read-exception input-form)
                        (assoc response :pretty (pretty-form (:form ?data))
                                        :original-form (:form ?data)))]
@@ -238,17 +238,17 @@
 (defn stop-web-server! [] (when-let [stop-fn @web-server_] (stop-fn)))
 (defn start-web-server! [& [port]]
   (stop-web-server!)
-  (let [port (or port 0)                                    ; 0 => Choose any available port
+  (let [port         (or port 0)                            ; 0 => Choose any available port
         ring-handler (var main-ring-handler)
 
         [port stop-fn]
         (let [server (aleph/start-server ring-handler {:port port})
-              p (promise)]
+              p      (promise)]
           (future @p)                                       ; Workaround for Ref. https://goo.gl/kLvced
           [(aleph.netty/port server)
            (fn [] (.close ^java.io.Closeable server) (deliver p nil))])
 
-        uri (format "http://localhost:%s/" port)]
+        uri          (format "http://localhost:%s/" port)]
 
     (infof "Web server is running at `%s`" uri)
 

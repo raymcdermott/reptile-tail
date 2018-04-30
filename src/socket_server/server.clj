@@ -33,10 +33,6 @@
   (def connected-uids connected-uids)                       ; Watchable, read-only atom
   )
 
-;; The standard Sente approach uses Ring to authenticate but we want to use WS
-(def connected-users (atom {:editors     ["eric" "mia" "mike" "ray"]
-                            :session-key "apropos"}))
-
 ;;;; Ring handlers
 
 (defn login-handler
@@ -52,7 +48,6 @@
 (defroutes ring-routes
            (GET "/chsk" ring-req (ring-ajax-get-or-ws-handshake ring-req))
            (POST "/chsk" ring-req (ring-ajax-post ring-req))
-           (POST "/login" ring-req (login-handler ring-req))
            (route/not-found "<h1>Page not found</h1>"))
 
 (def main-ring-handler
@@ -135,22 +130,23 @@
 ;;;;;;;;;;; REPL
 
 (defmethod -event-msg-handler :reptile/keystrokes
+  ;; Send the keystrokes to one and all
   [{:keys [?data]}]
   (let [shared-data {:form (:form ?data) :user (:user-name ?data)}]
     (doseq [uid (:any @connected-uids)]
-      ; TODO ... need to look into the whole reply-fn stuff
       (chsk-send! uid [:fast-push/keystrokes shared-data]))))
 
 (def shared-repl (atom nil))
 
 (defn pretty-form
+  "Syntax format and colouring"
   [edn-form]
-  (pr-str
-    (map hickory/as-hiccup
-         (hickory/parse-fragment
-           (highlight-html edn-form)))))
+  (pr-str (map hickory/as-hiccup
+               (hickory/parse-fragment
+                 (highlight-html edn-form)))))
 
 (defmethod -event-msg-handler :reptile/repl
+  ;; Send the results to one and all
   [{:keys [?data]}]
   (let [prepl      (or @shared-repl (reset! shared-repl (repl/shared-prepl {:name "reptile"})))
         input-form (try (read-string (:form ?data))
@@ -164,7 +160,6 @@
                                        :original-form (:form ?data)))]
 
       (doseq [uid (:any @connected-uids)]
-        ; TODO ... need to look into the whole reply-fn stuff
         (chsk-send! uid [:fast-push/eval (or prettified response)])))))
 
 (defn shutdown-repl
@@ -174,6 +169,10 @@
   )
 
 ;;;;;;;;;;; LOGIN
+
+;; The standard Sente approach uses Ring to authenticate but we want to use WS
+(def connected-users (atom {:editors     ["eric" "mia" "mike" "ray"]
+                            :session-key "apropos"}))
 
 ;; We can watch this atom for changes if we like
 (add-watch connected-uids :connected-uids
@@ -204,20 +203,21 @@
   (let [kw-user (keyword user)]
     (update-in state [:reptile :clients] dissoc kw-user)))
 
-;;
-;; check for a shared secret (get-in ?data [:proposed-user :secret])
+(def shared-secret (atom nil))
 
 (defn auth [{:keys [client-id ?data ?reply-fn state]}]
-  (if-let [user (get-in ?data [:proposed-user :user])]
-    (do
-      (swap! state register-user user client-id)
-      (?reply-fn :login-ok))
-    (?reply-fn :login-failed)))
+  (println "AUTH: data" ?data)
+  (let [{:keys [user secret]} ?data]
+    (if (= secret @shared-secret)
+      (do
+        (swap! state register-user user client-id)
+        (?reply-fn :login-ok))
+      (?reply-fn :login-failed))))
 
 (defmethod -event-msg-handler :reptile/login
   [ev-msg]
-  (async/thread
-    (auth (assoc ev-msg :state connected-users))))
+  (println ":reptile/login" ev-msg)
+  (auth (assoc ev-msg :state connected-users)))
 
 ;;;; Sente event router (our `event-msg-handler` loop)
 
@@ -235,8 +235,12 @@
 ;;;; Init stuff
 
 (defonce web-server_ (atom nil))                            ; (fn stop [])
-(defn stop-web-server! [] (when-let [stop-fn @web-server_] (stop-fn)))
-(defn start-web-server! [& [port]]
+(defn stop-web-server!
+  []
+  (when-let [stop-fn @web-server_] (stop-fn)))
+
+(defn start-web-server!
+  [& [port]]
   (stop-web-server!)
   (let [port         (or port 0)                            ; 0 => Choose any available port
         ring-handler (var main-ring-handler)
@@ -254,17 +258,24 @@
 
     (reset! web-server_ stop-fn)))
 
-(defn stop! []
+(defn stop!
+  []
   (stop-router!)
   (stop-web-server!))
 
-(defn start! []
+(defn start!
+  [port]
   (start-router!)
-  (start-web-server! 9090)
-  ;(start-example-broadcaster!) ; turn this off - instead we will follow other users
-  )
+  (start-web-server! port))
 
-(defn -main "For `lein run`, etc." [] (start!))
+(defn -main "For `lein run`, etc."
+  [& args]
+  (if (not= (count args) 2)
+    (println "need `port` and `secret`")
+    (let [port   (Integer/parseInt (first args))
+          secret (last args)]
+      (start! port)
+      (reset! shared-secret secret))))
 
 (comment
   (start!)

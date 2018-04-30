@@ -12,7 +12,7 @@
     (prn clj-code)
     (flush)))
 
-(defn prepl
+(defn prepl-client
   [{:keys [host port]}]
   (let [client        (Socket. ^String host ^Integer port)
         server-reader (LineNumberingPushbackReader. (io/reader client))
@@ -41,7 +41,7 @@
   ; TODO the caller uses an atom to hold the server for future use, we could do that
   (clj-server/start-server (merge socket-opts opts))
 
-  (let [[prepl-reader prepl-writer] (prepl socket-opts)]
+  (let [[prepl-reader prepl-writer] (prepl-client socket-opts)]
     {:reader prepl-reader :writer prepl-writer}))
 
 ;; hook web sockets in

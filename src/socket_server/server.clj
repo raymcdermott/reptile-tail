@@ -206,7 +206,6 @@
 (def shared-secret (atom nil))
 
 (defn auth [{:keys [client-id ?data ?reply-fn state]}]
-  (println "AUTH: data" ?data)
   (let [{:keys [user secret]} ?data]
     (if (= secret @shared-secret)
       (do
@@ -216,7 +215,6 @@
 
 (defmethod -event-msg-handler :reptile/login
   [ev-msg]
-  (println ":reptile/login" ev-msg)
   (auth (assoc ev-msg :state connected-users)))
 
 ;;;; Sente event router (our `event-msg-handler` loop)
@@ -274,8 +272,8 @@
     (println "need `port` and `secret`")
     (let [port   (Integer/parseInt (first args))
           secret (last args)]
-      (start! port)
-      (reset! shared-secret secret))))
+      (reset! shared-secret secret)
+      (start! port))))
 
 (comment
   (start!)

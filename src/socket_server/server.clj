@@ -17,7 +17,7 @@
             [clojure.edn :as edn]))
 
 ;; (timbre/set-level! :trace) ; Uncomment for more logging
-(reset! sente/debug-mode?_ true)                            ; Uncomment for extra debug info
+(reset! sente/debug-mode?_ false)                            ; Uncomment for extra debug info
 
 ;;;; Define our Sente channel socket (chsk) server
 
@@ -51,77 +51,29 @@
            (route/not-found "<h1>Page not found</h1>"))
 
 (def main-ring-handler
-  "**NB**: Sente requires the Ring `wrap-params` + `wrap-keyword-params`
-  middleware to work. These are included with
-  `ring.middleware.defaults/wrap-defaults` - but you'll need to ensure
-  that they're included yourself if you're not using `wrap-defaults`."
   (ring.middleware.defaults/wrap-defaults
     ring-routes ring.middleware.defaults/site-defaults))
 
-;;;; Some server>user async push examples
-
-(defn test-fast-server>user-pushes
-  "Quickly pushes 100 events to all connected users. Note that this'll be
-  fast+reliable even over Ajax!"
-  []
-  (doseq [uid (:any @connected-uids)]
-    (doseq [i (range 100)]
-      (chsk-send! uid [:fast-push/is-fast (str "hello " i "!!")]))))
-
-(comment (test-fast-server>user-pushes))
-
 (defonce broadcast-enabled?_ (atom true))
 
-(defn start-example-broadcaster!
-  "As an example of server>user async pushes, setup a loop to broadcast an
-  event to all connected users every 10 seconds"
-  []
-  (let [broadcast!
-        (fn [i]
-          (let [uids (:any @connected-uids)]
-            (debugf "Broadcasting server>user: %s uids" (count uids))
-            (doseq [uid uids]
-              (chsk-send! uid
-                          [:some/broadcast
-                           {:what-is-this "An async broadcast pushed from server"
-                            :how-often    "Every 10 seconds"
-                            :to-whom      uid
-                            :i            i}]))))]
-
-    (go-loop [i 0]
-      (<! (async/timeout 10000))
-      (when @broadcast-enabled?_ (broadcast! i))
-      (recur (inc i)))))
-
 ;;;; Sente event handlers
-
 (defmulti -event-msg-handler
           "Multimethod to handle Sente `event-msg`s"
-          :id                                               ; Dispatch on event-id
-          )
+          :id)                                              ; Dispatch on event-id
 
 (defn event-msg-handler
   "Wraps `-event-msg-handler` with logging, error catching, etc."
-  [{:as ev-msg :keys [id ?data event]}]
-  (-event-msg-handler ev-msg)                               ; Handle event-msgs on a single thread
-  ;; (future (-event-msg-handler ev-msg)) ; Handle event-msgs on a thread pool
-  )
-
-(defmethod -event-msg-handler
-  :default                                                  ; Default/fallback case (no other matching handler)
-  [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
-  (let [session (:session ring-req)
-        uid     (:uid session)]
-    (debugf "Unhandled event: %s" event)
-    (when ?reply-fn
-      (?reply-fn {:umatched-event-as-echoed-from-from-server event}))))
-
-(defmethod -event-msg-handler :example/test-rapid-push
   [ev-msg]
-  (test-fast-server>user-pushes))
+  (-event-msg-handler ev-msg))                              ; Handle event-msgs on a single thread
+
+(defmethod -event-msg-handler :default                      ; Default/fallback case (no other matching handler)
+  [{:keys [event ?reply-fn]}]
+  (debugf "Unhandled event: %s" event)
+  (when ?reply-fn
+    (?reply-fn {:unmatched-event-as-echoed-from-from-server event})))
 
 (defmethod -event-msg-handler :example/toggle-broadcast
-  [{:as ev-msg :keys [?reply-fn]}]
+  [{:keys [?reply-fn]}]
   (let [loop-enabled? (swap! broadcast-enabled?_ not)]
     (?reply-fn loop-enabled?)))
 
@@ -160,6 +112,7 @@
                                        :original-form (:form ?data)))]
 
       (doseq [uid (:any @connected-uids)]
+        (println "Sending out to uid" uid "eval from form" (:form response))
         (chsk-send! uid [:fast-push/eval (or prettified response)])))))
 
 (defn shutdown-repl
@@ -189,7 +142,6 @@
                  (println "Current users" curr-users)
                  (println "Previous users" prev-users)
                  (doseq [uid (:any @connected-uids)]
-                   ; TODO ... need to look into the whole reply-fn stuff
                    (chsk-send! uid [:fast-push/editors curr-users]))))))
 
 (defn register-uid [state uid send-fn]
@@ -233,6 +185,7 @@
 ;;;; Init stuff
 
 (defonce web-server_ (atom nil))                            ; (fn stop [])
+
 (defn stop-web-server!
   []
   (when-let [stop-fn @web-server_] (stop-fn)))
@@ -274,7 +227,3 @@
           secret (last args)]
       (reset! shared-secret secret)
       (start! port))))
-
-(comment
-  (start!)
-  (test-fast-server>user-pushes))

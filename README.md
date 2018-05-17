@@ -1,25 +1,29 @@
 # REPtiLe server library
 
-A Clojure library designed to expose a shared PREPL
+A Clojure server designed to expose a shared PREPL
 
 ## Usage
 
-Login and then REPL. Features must be obvious.
+```bash
+$ lein run 9090 some-shared-secret
+```
 
 ## Plan
 
-- [x] shared REPL state
-- [x] shared view of edits in real-time 
-- [x] shared REPL history
-- [ ] post client to S3
-- [ ] share server using localtunnel.me
-- [ ] authentication using shared OTP (first come basis)
-- [ ] authentication using shared OTP (based on a team definition)
-- [ ] expose via WS on an AWS server
-- [ ] parinfer default (indent)
-- [ ] user selected parinfer mode (indent, paren, smart)
-- [ ] matching parens
+The server provides
 
+- [X] Shared REPL state
+- [X] Shared view of edits in real-time 
+- [X] Shared REPL history
+- [X] Authentication using shared secret
+- [X] A demo for hosting a server on an AWS server
+- [ ] Dynamic addition of new libraries to the REPL
+- [ ] Incremental feedback on long running REPL evaluations
+- [ ] Cancel long running REPL evaluations
+- [ ] Limit user count (2, 3, 4, etc...)
+- [ ] Limit users based on user names (jane, joe, mary, etc...)
+- [ ] Choice of Java / node runtime REPLs
+ 
 ## License
 
 Copyright © 2018 Ray McDermott

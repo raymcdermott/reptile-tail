@@ -17,7 +17,7 @@
             [clojure.edn :as edn]))
 
 ;; (timbre/set-level! :trace) ; Uncomment for more logging
-(reset! sente/debug-mode?_ false)                            ; Uncomment for extra debug info
+(reset! sente/debug-mode?_ false)                           ; Uncomment for extra debug info
 
 ;;;; Define our Sente channel socket (chsk) server
 
@@ -30,21 +30,9 @@
   (def ring-ajax-get-or-ws-handshake ajax-get-or-ws-handshake-fn)
   (def ch-chsk ch-recv)                                     ; ChannelSocket's receive channel
   (def chsk-send! send-fn)                                  ; ChannelSocket's send API fn
-  (def connected-uids connected-uids)                       ; Watchable, read-only atom
-  )
+  (def connected-uids connected-uids))                      ; Watchable, read-only atom
 
 ;;;; Ring handlers
-
-(defn login-handler
-  "Here's where you'll add your server-side login/auth procedure (Friend, etc.).
-  In our simplified example we'll just always successfully authenticate the user
-  with whatever user-id they provided in the auth request."
-  [ring-req]
-  (let [{:keys [session params]} ring-req
-        {:keys [user-id]} params]
-    (debugf "Login request: %s" params)
-    {:status 200 :session (assoc session :uid user-id)}))
-
 (defroutes ring-routes
            (GET "/chsk" ring-req (ring-ajax-get-or-ws-handshake ring-req))
            (POST "/chsk" ring-req (ring-ajax-post ring-req))
@@ -77,10 +65,7 @@
   (let [loop-enabled? (swap! broadcast-enabled?_ not)]
     (?reply-fn loop-enabled?)))
 
-;; TODO Add your (defmethod -event-msg-handler <event-id> [ev-msg] <body>)s here...
-
-;;;;;;;;;;; REPL
-
+;;;; REPL
 (defmethod -event-msg-handler :reptile/keystrokes
   ;; Send the keystrokes to one and all
   [{:keys [?data]}]
@@ -103,7 +88,7 @@
   (let [prepl      (or @shared-repl (reset! shared-repl (repl/shared-prepl {:name "reptile"})))
         input-form (try (read-string (:form ?data))
                         (catch Exception e {:read-exception
-                                            (str "Exception: " (.getMessage e) " - check parens!")}))]
+                                            (str "Read error: " (.getMessage e) " - check parens")}))]
     (let [response   (if-not (:read-exception input-form)
                        (repl/shared-eval prepl input-form)
                        {:tag :ret, :val (:read-exception input-form), :form (:form ?data)})
@@ -112,7 +97,6 @@
                                        :original-form (:form ?data)))]
 
       (doseq [uid (:any @connected-uids)]
-        (println "Sending out to uid" uid "eval from form" (:form response))
         (chsk-send! uid [:fast-push/eval (or prettified response)])))))
 
 (defn shutdown-repl

@@ -10,7 +10,7 @@ $ lein run 9090 some-shared-secret
 
 ## Plan
 
-The server provides
+The first version will be considered feature complete once the server provides
 
 - [X] Shared REPL state
 - [X] Shared view of edits in real-time 
@@ -22,8 +22,17 @@ The server provides
 - [ ] Cancel long running REPL evaluations
 - [ ] Limit user count (2, 3, 4, etc...)
 - [ ] Limit users based on user names (jane, joe, mary, etc...)
-- [ ] Choice of Java / node runtime REPLs
  
+## Planned features
+
+After the initial version these additional features are planned
+
+- [ ] Choice of Java / node runtime REPLs
+
+## Bugs / Feature Requests
+
+Please open an issue on the repo
+
 ## License
 
 Copyright © 2018 Ray McDermott

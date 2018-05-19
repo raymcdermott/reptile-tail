@@ -75,6 +75,8 @@
 
 (def shared-repl (atom nil))
 
+;; TODO bug ... during highlighting, strings like "foo" become &quot;foo&quot;
+;; We have a hack to fix this on the client but would be nicer to not have the problem
 (defn pretty-form
   "Syntax format and colouring"
   [edn-form]

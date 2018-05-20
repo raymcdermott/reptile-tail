@@ -5,7 +5,7 @@ A Clojure server designed to expose a shared PREPL
 ## Usage
 
 ```bash
-$ lein run 9090 some-shared-secret
+$ clj -Areptile 9090 some-shared-secret
 ```
 
 ## Plan

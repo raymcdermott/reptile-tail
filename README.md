@@ -17,7 +17,7 @@ The first version will be considered feature complete once the server provides
 - [X] Shared REPL history
 - [X] Authentication using shared secret
 - [X] A demo for hosting a server on an AWS server
-- [ ] Dynamic addition of new libraries to the REPL
+- [X] Dynamic addition of new libraries to the REPL
 - [ ] Incremental feedback on long running REPL evaluations
 - [ ] Cancel long running REPL evaluations
 - [ ] Limit user count (2, 3, 4, etc...)

@@ -85,7 +85,6 @@
                  (highlight-html edn-form)))))
 
 (defmethod -event-msg-handler :reptile/repl
-  ;; Send the results to one and all
   [{:keys [?data]}]
   (let [prepl      (or @shared-repl (reset! shared-repl (repl/shared-prepl {:name "reptile"})))
         input-form (try (read-string (:form ?data))
@@ -98,6 +97,7 @@
                        (assoc response :pretty (pretty-form (:form ?data))
                                        :original-form (:form ?data)))]
 
+      ;; Send the results to one and all
       (doseq [uid (:any @connected-uids)]
         (chsk-send! uid [:fast-push/eval (or prettified response)])))))
 
@@ -205,6 +205,10 @@
   (start-router!)
   (start-web-server! port))
 
+; Trying to enable add-lib ... must use a DynamicClassLoader
+; Based on https://github.com/mfikes/clojurescript/blob/d68c9397599366777d9b322ec586fdd398302f25/src/main/clojure
+; /cljs/cli.clj#L605
+
 (defn -main "For `lein run`, etc."
   [& args]
   (if (not= (count args) 2)
@@ -212,4 +216,8 @@
     (let [port   (Integer/parseInt (first args))
           secret (last args)]
       (reset! shared-secret secret)
-      (start! port))))
+      (try
+        (let [cl (.getContextClassLoader (Thread/currentThread))]
+          (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl))
+          (start! port))
+        (catch Exception e (str "ClassLoader issue - caught exception: " (.getMessage e)))))))

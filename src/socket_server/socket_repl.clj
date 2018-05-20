@@ -26,8 +26,9 @@
 
 (defn shared-eval
   [repl form]
-  (let [_      (send-code (:writer repl) form)
-        result (read (:reader repl))]
+  (send-code (:writer repl) form)
+
+  (when-let [result (read (:reader repl))]
     ; TODO ... use core.async to prevent blocking in this loop thereby have the chance to provide intermediate results
     ; TODO ... work out the right way to cancel a command after code has been sent to the REPL
     (loop [results [result]]
@@ -50,6 +51,7 @@
   (let [[prepl-reader prepl-writer] (prepl-client socket-opts)]
     {:reader prepl-reader :writer prepl-writer}))
 
+
 ;; hook web sockets in
 
 ;; then hook core.async
@@ -57,3 +59,23 @@
 ;; then make things nice
 
 
+
+
+#_(defn main
+    "A generic runner for ClojureScript. repl-env must satisfy
+    cljs.repl/IReplEnvOptions and cljs.repl/IJavaScriptEnv protocols. args is a
+    sequence of command line flags."
+    [repl-env & args]
+    (try
+      (let [cl (.getContextClassLoader (Thread/currentThread))]
+        (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl)))
+      (let [commands (merged-commands repl-env)]
+        (if args
+          (loop [[opt arg & more :as args] (normalize commands args) inits []]
+            (if (dispatch? commands :init opt)
+              (recur more (conj inits [opt arg]))
+              ((get-dispatch commands :main opt script-opt)
+                repl-env args (initialize inits commands))))
+          (repl-opt repl-env nil nil)))
+      (finally
+        (flush))))

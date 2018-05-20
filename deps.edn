@@ -1,0 +1,15 @@
+{:deps
+ {org.clojure/clojure        {:mvn/version "1.10.0-alpha4"}
+  org.clojure/core.async     {:mvn/version "0.4.474"}
+  org.clojure/tools.logging  {:mvn/version "0.4.0"}
+  aleph                      {:mvn/version "0.4.4"}
+  gloss                      {:mvn/version "0.2.6"}
+  compojure                  {:mvn/version "1.6.0"}
+  com.taoensso/sente         {:mvn/version "1.12.0"}
+  com.taoensso/timbre        {:mvn/version "4.10.0"}
+  ring                       {:mvn/version "1.6.3"}
+  ring/ring-defaults         {:mvn/version "0.3.1"}
+  venantius/glow             {:mvn/version "0.1.5"}
+  hickory                    {:mvn/version "0.7.1"}
+  com.cognitect/transit-clj  {:mvn/version "0.8.300"}
+  com.cognitect/transit-cljs {:mvn/version "0.8.243"}}}

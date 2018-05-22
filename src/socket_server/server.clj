@@ -87,15 +87,17 @@
 (defmethod -event-msg-handler :reptile/repl
   [{:keys [?data]}]
   (let [prepl      (or @shared-repl (reset! shared-repl (repl/shared-prepl {:name "reptile"})))
+        source     (:source ?data)
         input-form (try (read-string (:form ?data))
                         (catch Exception e {:read-exception
                                             (str "Read error: " (.getMessage e) " - check parens")}))]
     (let [response   (if-not (:read-exception input-form)
-                       (repl/shared-eval prepl input-form)
+                       (repl/shared-eval prepl source input-form)
                        {:tag :ret, :val (:read-exception input-form), :form (:form ?data)})
           prettified (when-not (:read-exception input-form)
                        (assoc response :pretty (pretty-form (:form ?data))
-                                       :original-form (:form ?data)))]
+                                       :original-form (:form ?data)
+                                       :source source))]
 
       ;; Send the results to one and all
       (doseq [uid (:any @connected-uids)]

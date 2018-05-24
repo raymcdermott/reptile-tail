@@ -1,6 +1,7 @@
 {:deps    {org.clojure/clojure          {:mvn/version "1.10.0-alpha4"}
            org.clojure/core.async       {:mvn/version "0.4.474"}
            org.clojure/tools.logging    {:mvn/version "0.4.0"}
+           org.clojure/tools.nrepl      {:mvn/version "0.2.12"}
            aleph                        {:mvn/version "0.4.4"}
            gloss                        {:mvn/version "0.2.6"}
            compojure                    {:mvn/version "1.6.0"}
@@ -14,4 +15,4 @@
            com.cognitect/transit-cljs   {:mvn/version "0.8.243"}
            org.clojure/tools.deps.alpha {:git/url "https://github.com/clojure/tools.deps.alpha.git"
                                          :sha     "d492e97259c013ba401c5238842cd3445839d020"}}
- :aliases {:reptile {:main-opts ["-m" "socket-server.server"]}}}
+ :aliases {:reptile {:main-opts ["-m" "reptile.tail.server"]}}}

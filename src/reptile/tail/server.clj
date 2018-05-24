@@ -1,4 +1,4 @@
-(ns socket-server.server
+(ns reptile.tail.server
   (:require [clojure.string :as str]
             [ring.middleware.defaults]
             [compojure.core :as comp :refer (defroutes GET POST)]
@@ -13,7 +13,7 @@
             [taoensso.sente.packers.transit :as sente-transit]
             [glow.core :as glow :refer [highlight-html]]
             [hickory.core :as hickory]
-            [socket-server.socket-repl :as repl]
+            [reptile.tail.socket-repl :as repl]
             [clojure.edn :as edn]))
 
 ;; (timbre/set-level! :trace) ; Uncomment for more logging
@@ -73,8 +73,6 @@
     (doseq [uid (:any @connected-uids)]
       (chsk-send! uid [:fast-push/keystrokes shared-data]))))
 
-(def shared-repl (atom nil))
-
 ;; TODO bug ... during highlighting, strings like "foo" become &quot;foo&quot;
 ;; We have a hack to fix this on the client but would be nicer to not have the problem
 (defn pretty-form
@@ -84,9 +82,15 @@
                (hickory/parse-fragment
                  (highlight-html edn-form)))))
 
+;; TODO we can update this, and then via a watcher - switch to another app
+(def repl-socket (atom nil))
+(def shared-repl (atom nil))
+
 (defmethod -event-msg-handler :reptile/repl
   [{:keys [?data]}]
-  (let [prepl      (or @shared-repl (reset! shared-repl (repl/shared-prepl {:name "reptile"})))
+  (let [prepl      (or @shared-repl
+                       (reset! shared-repl (repl/shared-prepl (:host @repl-socket) (:port @repl-socket))))
+        _          (println "prepl" prepl "shared-repl" @shared-repl)
         source     (:source ?data)
         input-form (try (read-string (:form ?data))
                         (catch Exception e {:read-exception
@@ -213,11 +217,16 @@
 
 (defn -main "For `lein run`, etc."
   [& args]
-  (if (not= (count args) 2)
-    (println "need `port` and `secret`")
-    (let [port   (Integer/parseInt (first args))
-          secret (last args)]
+  (if (not= (count args) 4)
+    (println "need `web port`, `secret`, `socket host` and `socket port`")
+    (let [port        (Integer/parseInt (first args))
+          secret      (second args)
+          socket-host (nth args 2)
+          socket-port (Integer/parseInt (last args))]
       (reset! shared-secret secret)
+      (reset! repl-socket {:host socket-host :port socket-port})
+
+      ;; TODO - Don't think we need this, the DCL is on the REPL side
       (try
         (let [cl (.getContextClassLoader (Thread/currentThread))]
           (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl))

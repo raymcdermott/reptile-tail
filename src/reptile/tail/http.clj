@@ -1,4 +1,4 @@
-(ns socket-server.http
+(ns reptile.tail.http
   (:require [compojure.core :as compojure :refer [GET POST]]
             [ring.middleware.params :as params]
             [ring.middleware.keyword-params :as keyword-params]

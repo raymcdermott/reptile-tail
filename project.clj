@@ -1,4 +1,4 @@
-(defproject reptile-server "0.1.0-SNAPSHOT"
+(defproject reptile/tail "0.1.0-SNAPSHOT"
   :description "Clojure server to enable a shared REPL"
   :url "https://github.com/raymcdermott/reptile"
   :license {:name "Eclipse Public License"
@@ -11,6 +11,7 @@
 
   :tools/deps [:system :home :project]
 
-  :main socket-server.server)
+  :main reptile.tail.server)
+
 
 

@@ -1,4 +1,4 @@
-(ns socket-server.client
+(ns reptile.tail.client
   "Official Sente reference example: client"
   {:author "Peter Taoussanis (@ptaoussanis)"}
 

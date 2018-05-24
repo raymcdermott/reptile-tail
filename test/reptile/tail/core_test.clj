@@ -1,6 +1,6 @@
-(ns socket-server.core-test
+(ns reptile.tail.core-test
   (:require [clojure.test :refer :all]
-            [socket-server.core :refer :all]))
+            [reptile.tail.server :refer :all]))
 
 (deftest a-test
   (testing "FIXME, I fail."

@@ -1,4 +1,4 @@
-(ns socket-server.socket-repl
+(ns reptile.tail.socket-repl
   (:require [clojure.java.io :as io]
             [clojure.edn :as edn]
             [clojure.core.server :as clj-server])
@@ -12,17 +12,14 @@
     (prn clj-code)
     (flush)))
 
+;; TODO ... poll server and enable reconnection
 (defn prepl-client
-  [{:keys [host port]}]
+  "Attaching the PREPL to a given `host` and `port`"
+  [host port]
   (let [client        (Socket. ^String host ^Integer port)
         server-reader (LineNumberingPushbackReader. (io/reader client))
         server-writer (OutputStreamWriter. (io/output-stream client))]
     [server-reader server-writer]))
-
-(def ^:private socket-opts
-  {:port          9080
-   :server-daemon false
-   :accept        'clojure.core.server/io-prepl})
 
 (defn shared-eval
   [repl source form]
@@ -42,14 +39,27 @@
   ; TODO we do this to clobber all existing servers - could be more finessed ;-)
   (clj-server/stop-servers))
 
-(defn shared-prepl
+(defn start-socket-server
   [opts]
-  ; TODO we do this to clobber all existing servers - could be more finessed ;-)
-  (clj-server/stop-servers)
-  ; TODO the caller uses an atom to hold the server for future use, we could do that
-  (clj-server/start-server (merge socket-opts opts))
+  (try
+    (let [socket-opts {:port          9080
+                       :server-daemon false
+                       :accept        'clojure.core.server/io-prepl}
+          cl          (.getContextClassLoader (Thread/currentThread))]
+      (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl))
 
-  (let [[prepl-reader prepl-writer] (prepl-client socket-opts)]
+      ; TODO ... finesse rather than clobbering all existing servers
+      (clj-server/stop-servers)
+
+      ; TODO the caller uses an atom to hold the server for future use, we could do that here instead
+      (clj-server/start-server (merge socket-opts opts)))
+
+    (catch Exception e (str "ClassLoader issue - caught exception: " (.getMessage e)))))
+
+
+(defn shared-prepl
+  [host port]
+  (let [[prepl-reader prepl-writer] (prepl-client host port)]
     {:reader prepl-reader :writer prepl-writer}))
 
 
@@ -58,8 +68,6 @@
 ;; then hook core.async
 
 ;; then make things nice
-
-
 
 
 #_(defn main

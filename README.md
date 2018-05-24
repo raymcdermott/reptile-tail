@@ -2,16 +2,18 @@
 
 A Clojure server designed to expose a shared PREPL
 
-I have a sister project repl-ui that is a browser based client for reptile.
+See the sister project reptile-tongue - a browser based client for REPtiLe.
 
 ## Usage
 
-The command takes two run time parameters:
-`port` - a number above 1024, on which the web server will be exposed
+The command takes these run time parameters:
+`http-port` - a number above 1024, on which the web server will be exposed
 `shared-secret` - to hand out to clients so that they can connect
+`socket-host` - the host which is running the socket server
+`socket-port` - port number for socket server
 
 ```bash
-$ clj -Areptile 8888 warm-blooded-lizards-rock
+$ clj -Areptile 8888 warm-blooded-lizards-rock localhost 9075
 ```
 
 ## Plan
@@ -34,10 +36,7 @@ The first version will be considered feature complete once the server provides
 After the initial version these additional features are planned
 
 - [ ] Choice of Java / node runtime REPLs
-
-## Bugs / Feature Requests
-
-Please open an issue on the repo
+- [ ] Investigate GraalVM
 
 ## License
 

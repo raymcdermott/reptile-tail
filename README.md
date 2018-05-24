@@ -2,7 +2,8 @@
 
 A Clojure server designed to expose a shared PREPL
 
-See the sister project reptile-tongue - a browser based client for REPtiLe.
+See the sister project [reptile-tongue](https://github.com/raymcdermott/reptile-tongue) - a browser based client for 
+REPtiLe.
 
 ## Usage
 

@@ -1,7 +1,8 @@
-{:deps    {org.clojure/clojure          {:mvn/version "1.10.0-alpha4"}
+{:deps    {clojure-complete             {:mvn/version "0.2.4" :exclusions [[org.clojure/clojure]]}
+           org.clojure/tools.nrepl      {:mvn/version "0.2.12" :exclusions [[org.clojure/clojure]]}
+           org.clojure/clojure          {:mvn/version "1.10.0-alpha4"}
            org.clojure/core.async       {:mvn/version "0.4.474"}
            org.clojure/tools.logging    {:mvn/version "0.4.0"}
-           org.clojure/tools.nrepl      {:mvn/version "0.2.12"}
            aleph                        {:mvn/version "0.4.4"}
            gloss                        {:mvn/version "0.2.6"}
            compojure                    {:mvn/version "1.6.0"}

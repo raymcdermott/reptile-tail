@@ -22,16 +22,15 @@
     [server-reader server-writer]))
 
 (defn shared-eval
-  [repl source form]
+  [repl form]
   (send-code (:writer repl) form)
 
   (when-let [result (read (:reader repl))]
     ; TODO ... use core.async to prevent blocking in this loop thereby have the chance to provide intermediate results
     ; TODO ... work out the right way to cancel a command after code has been sent to the REPL
     (loop [results [result]]
-      (println "repl read" result)
       (if (= :ret (:tag (last results)))
-        {:eval-result results :source source}
+        results
         (recur (conj results (read (:reader repl))))))))
 
 (defn stop-shared-prepl

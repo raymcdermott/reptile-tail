@@ -73,39 +73,30 @@
     (doseq [uid (:any @connected-uids)]
       (chsk-send! uid [:fast-push/keystrokes shared-data]))))
 
-;; TODO bug ... during highlighting, strings like "foo" become &quot;foo&quot;
+;; Bug ... during highlighting, strings like "foo" become &quot;foo&quot;
 ;; We have a hack to fix this on the client but would be nicer to not have the problem
-(defn pretty-form
+(defn highlight
   "Syntax format and colouring"
-  [edn-form]
+  [edn-str]
   (pr-str (map hickory/as-hiccup
                (hickory/parse-fragment
-                 (highlight-html edn-form)))))
+                 (highlight-html edn-str)))))
 
-;; TODO we can update this, and then via a watcher - switch to another app
+;; TODO prove this idea: we can update this, and then via a watcher - switch to another app dynamically
 (def repl-socket (atom nil))
 (def shared-repl (atom nil))
 
 (defmethod -event-msg-handler :reptile/repl
   [{:keys [?data]}]
-  (let [prepl      (or @shared-repl
-                       (reset! shared-repl (repl/shared-prepl (:host @repl-socket) (:port @repl-socket))))
-        _          (println "prepl" prepl "shared-repl" @shared-repl)
-        source     (:source ?data)
-        input-form (try (read-string (:form ?data))
-                        (catch Exception e {:read-exception
-                                            (str "Read error: " (.getMessage e) " - check parens")}))]
-    (let [response   (if-not (:read-exception input-form)
-                       (repl/shared-eval prepl source input-form)
-                       {:tag :ret, :val (:read-exception input-form), :form (:form ?data)})
-          prettified (when-not (:read-exception input-form)
-                       (assoc response :pretty (pretty-form (:form ?data))
-                                       :original-form (:form ?data)
-                                       :source source))]
+  (let [prepl                (or @shared-repl (reset! shared-repl (repl/shared-prepl (:host @repl-socket)
+                                                                                     (:port @repl-socket))))
+        input-form           (:form ?data)
+        response             {:prepl-response (repl/shared-eval prepl (edn/read-string input-form))}
+        highlighted-form     {:highlighted-form (highlight input-form)}]
 
-      ;; Send the results to one and all
-      (doseq [uid (:any @connected-uids)]
-        (chsk-send! uid [:fast-push/eval (or prettified response)])))))
+    ;; Send the results to everyone
+    (doseq [uid (:any @connected-uids)]
+      (chsk-send! uid [:fast-push/eval (merge ?data response highlighted-form)]))))
 
 (defn shutdown-repl
   [repl]

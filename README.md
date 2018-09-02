@@ -14,7 +14,7 @@ The command takes these run time parameters:
 `socket-port` - port number for socket server
 
 ```bash
-$ clj -Areptile 8888 warm-blooded-lizards-rock localhost 9075
+$ clojure -A:reptile 8888 warm-blooded-lizards-rock localhost 9075
 ```
 
 ## Plan

@@ -2,9 +2,9 @@
   (:require [clojure.java.io :as io]
             [clojure.edn :as edn]
             [clojure.core.server :as clj-server])
-  (:import (java.net Socket)
+  (:import (java.net Socket ServerSocket)
            (java.io OutputStreamWriter)
-           (clojure.lang LineNumberingPushbackReader)))
+           (clojure.lang LineNumberingPushbackReader DynamicClassLoader)))
 
 (defn send-code
   [code-writer clj-code]
@@ -33,33 +33,34 @@
         results
         (recur (conj results (read (:reader repl))))))))
 
-(defn stop-shared-prepl
-  [prepl]
-  ; TODO we do this to clobber all existing servers - could be more finessed ;-)
-  (clj-server/stop-servers))
-
-(defn start-socket-server
+(defn shared-prepl-server
   [opts]
-  (try
-    (let [socket-opts {:port          9080
-                       :server-daemon false
-                       :accept        'clojure.core.server/io-prepl}
-          cl          (.getContextClassLoader (Thread/currentThread))]
-      (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl))
+  (let [socket-opts {:port          0
+                     :server-daemon false                   ; Keep the app running
+                     :accept        'clojure.core.server/io-prepl}]
 
-      ; TODO ... finesse rather than clobbering all existing servers
-      (clj-server/stop-servers)
+    ;; A clojure.lang.DynamicClassLoader is needed to enable interactive library addition
+    (try (let [current-thread (Thread/currentThread)
+               cl             (.getContextClassLoader current-thread)]
+           (.setContextClassLoader current-thread (DynamicClassLoader. cl))
 
-      ; TODO the caller uses an atom to hold the server for future use, we could do that here instead
-      (clj-server/start-server (merge socket-opts opts)))
+           (let [server (clj-server/start-server (merge socket-opts opts))]
+             (println "REPL server port" (.getLocalPort ^ServerSocket server))))
 
-    (catch Exception e (str "ClassLoader issue - caught exception: " (.getMessage e)))))
+         (catch Exception e (str "ClassLoader issue - caught exception: " (.getMessage e))))))
 
 
 (defn shared-prepl
   [host port]
-  (let [[prepl-reader prepl-writer] (prepl-client host port)]
-    {:reader prepl-reader :writer prepl-writer}))
+  (let [local-opts {:host "localhost" :port 9080 :name "tail-prepl"}]
+
+    (if (= host :self)
+      (shared-prepl-server local-opts))
+
+    (let [prepl-host (if (= host :self) (:host local-opts) host)
+          prepl-port (if (= port :self) (:port local-opts) port)
+          [prepl-reader prepl-writer] (prepl-client prepl-host prepl-port)]
+      {:reader prepl-reader :writer prepl-writer})))
 
 
 ;; hook web sockets in
@@ -67,23 +68,3 @@
 ;; then hook core.async
 
 ;; then make things nice
-
-
-#_(defn main
-    "A generic runner for ClojureScript. repl-env must satisfy
-    cljs.repl/IReplEnvOptions and cljs.repl/IJavaScriptEnv protocols. args is a
-    sequence of command line flags."
-    [repl-env & args]
-    (try
-      (let [cl (.getContextClassLoader (Thread/currentThread))]
-        (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl)))
-      (let [commands (merged-commands repl-env)]
-        (if args
-          (loop [[opt arg & more :as args] (normalize commands args) inits []]
-            (if (dispatch? commands :init opt)
-              (recur more (conj inits [opt arg]))
-              ((get-dispatch commands :main opt script-opt)
-                repl-env args (initialize inits commands))))
-          (repl-opt repl-env nil nil)))
-      (finally
-        (flush))))

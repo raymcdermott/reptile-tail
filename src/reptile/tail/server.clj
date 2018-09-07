@@ -73,14 +73,6 @@
     (doseq [uid (:any @connected-uids)]
       (chsk-send! uid [:fast-push/keystrokes shared-data]))))
 
-;; Bug ... during highlighting, strings like "foo" become &quot;foo&quot;
-;; We have a hack to fix this on the client but would be nicer to not have the problem
-(defn highlight
-  "Syntax format and colouring"
-  [edn-str]
-  (pr-str (map hickory/as-hiccup
-               (hickory/parse-fragment
-                 (highlight-html edn-str)))))
 
 ;; TODO prove this idea: we can update this, and then via a watcher - switch to another app dynamically
 (def repl-socket (atom nil))
@@ -88,15 +80,14 @@
 
 (defmethod -event-msg-handler :reptile/repl
   [{:keys [?data]}]
-  (let [prepl                (or @shared-repl (reset! shared-repl (repl/shared-prepl (:host @repl-socket)
-                                                                                     (:port @repl-socket))))
-        input-form           (:form ?data)
-        response             {:prepl-response (repl/shared-eval prepl (edn/read-string input-form))}
-        highlighted-form     {:highlighted-form (highlight input-form)}]
+  (let [prepl      (or @shared-repl (reset! shared-repl (repl/shared-prepl (:host @repl-socket)
+                                                                           (:port @repl-socket))))
+        input-form (:form ?data)
+        response   {:prepl-response (repl/shared-eval prepl (edn/read-string input-form))}]
 
     ;; Send the results to everyone
     (doseq [uid (:any @connected-uids)]
-      (chsk-send! uid [:fast-push/eval (merge ?data response highlighted-form)]))))
+      (chsk-send! uid [:fast-push/eval (merge ?data response)]))))
 
 (defn shutdown-repl
   [repl]
@@ -206,20 +197,33 @@
 ; Based on https://github.com/mfikes/clojurescript/blob/d68c9397599366777d9b322ec586fdd398302f25/src/main/clojure
 ; /cljs/cli.clj#L605
 
+
+;; TODO - adjust args arities
+;; - take 2 args ... start socket server in this process
+;; - take 4 args ... connect to external socket server
+
 (defn -main "For `lein run`, etc."
   [& args]
-  (if (not= (count args) 4)
-    (println "need `web port`, `secret`, `socket host` and `socket port`")
-    (let [port        (Integer/parseInt (first args))
-          secret      (second args)
-          socket-host (nth args 2)
-          socket-port (Integer/parseInt (last args))]
-      (reset! shared-secret secret)
-      (reset! repl-socket {:host socket-host :port socket-port})
+  (if (not (or (= (count args) 4) (= (count args) 2)))
+    (println "need `web port`, `secret` [optionally `socket host` and `socket port` for external processes]")
+    (let [{:keys [server-port secret]}
+          (if (= (count args) 4)
+            (let [port        (Integer/parseInt (first args))
+                  secret      (second args)
+                  socket-host (nth args 2)
+                  socket-port (Integer/parseInt (last args))]
+              (reset! repl-socket {:host socket-host :port socket-port})
+              {:server-port port :secret secret})
+            (let [port   (Integer/parseInt (first args))
+                  secret (second args)]
+              (reset! repl-socket {:host :self :port :self})
+              {:server-port port :secret secret}))]
 
-      ;; TODO - Don't think we need this, the DCL is on the REPL side
+      (reset! shared-secret secret)
+
       (try
-        (let [cl (.getContextClassLoader (Thread/currentThread))]
-          (.setContextClassLoader (Thread/currentThread) (clojure.lang.DynamicClassLoader. cl))
-          (start! port))
+        (let [current-thread (Thread/currentThread)
+              cl             (.getContextClassLoader current-thread)]
+          (.setContextClassLoader current-thread (clojure.lang.DynamicClassLoader. cl))
+          (start! server-port))
         (catch Exception e (str "ClassLoader issue - caught exception: " (.getMessage e)))))))

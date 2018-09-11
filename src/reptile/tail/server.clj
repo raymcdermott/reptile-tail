@@ -1,18 +1,15 @@
 (ns reptile.tail.server
   (:require [clojure.string :as str]
             [ring.middleware.defaults]
-            [compojure.core :as comp :refer (defroutes GET POST)]
+            [compojure.core :as comp :refer [defroutes GET POST]]
             [compojure.route :as route]
-            [hiccup.core :as hiccup]
-            [clojure.core.async :as async :refer (<! <!! >! >!! put! chan go go-loop)]
-            [taoensso.encore :as encore :refer (have have?)]
-            [taoensso.timbre :as timbre :refer (tracef debugf infof warnf errorf)]
+            [clojure.core.async :as async :refer [<! <!! >! >!! put! chan go go-loop]]
+            [taoensso.encore :as encore :refer [have have?]]
+            [taoensso.timbre :as timbre :refer [tracef debugf infof warnf errorf]]
             [taoensso.sente :as sente]
             [aleph.http :as aleph]
-            [taoensso.sente.server-adapters.aleph :refer (get-sch-adapter)]
+            [taoensso.sente.server-adapters.aleph :refer [get-sch-adapter]]
             [taoensso.sente.packers.transit :as sente-transit]
-            [glow.core :as glow :refer [highlight-html]]
-            [hickory.core :as hickory]
             [reptile.tail.socket-repl :as repl]
             [clojure.edn :as edn]))
 
@@ -80,10 +77,10 @@
 
 (defmethod -event-msg-handler :reptile/repl
   [{:keys [?data]}]
-  (let [prepl      (or @shared-repl (reset! shared-repl (repl/shared-prepl (:host @repl-socket)
-                                                                           (:port @repl-socket))))
+  (let [
+        prepl      (or @shared-repl (reset! shared-repl (repl/shared-prepl @repl-socket)))
         input-form (:form ?data)
-        response   {:prepl-response (repl/shared-eval prepl (edn/read-string input-form))}]
+        response   {:prepl-response (repl/shared-eval prepl input-form)}]
 
     ;; Send the results to everyone
     (doseq [uid (:any @connected-uids)]
@@ -216,7 +213,7 @@
               {:server-port port :secret secret})
             (let [port   (Integer/parseInt (first args))
                   secret (second args)]
-              (reset! repl-socket {:host :self :port :self})
+              (reset! repl-socket {:host :self :port 0})
               {:server-port port :secret secret}))]
 
       (reset! shared-secret secret)

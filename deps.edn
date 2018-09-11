@@ -16,4 +16,13 @@
            com.cognitect/transit-cljs   {:mvn/version "0.8.243"}
            org.clojure/tools.deps.alpha {:git/url "https://github.com/clojure/tools.deps.alpha.git"
                                          :sha     "d492e97259c013ba401c5238842cd3445839d020"}}
- :aliases {:reptile {:main-opts ["-m" "reptile.tail.server"]}}}
+ :aliases {:test    {:extra-paths ["test"]
+                     :extra-deps
+                                  {com.cognitect/test-runner {:git/url "git@github.com:cognitect-labs/test-runner"
+                                                              :sha     "5f2b5c2efb444df76fb5252102b33f542ebf7f58"}}
+                     :main-opts   ["-m" "cognitect.test-runner"]}
+           :reptile {:main-opts ["-m" "reptile.tail.server"]}}}
+
+
+
+

@@ -1,6 +1,6 @@
 (ns reptile.tail.socket-repl
   (:require [clojure.java.io :as io]
-            [clojure.edn :as edn]
+            [clojure.tools.reader.edn :as edn]
             [clojure.core.server :as clj-server])
   (:import (java.net Socket ServerSocket)
            (java.io OutputStreamWriter)
@@ -22,23 +22,22 @@
         server-writer (OutputStreamWriter. (io/output-stream client))]
     [server-reader server-writer]))
 
-;; TODO - account for strings
-
 (defn shared-eval
   [repl form]
-  (let [prepl-reader (partial read (:reader repl))]
-    (send-code (:writer repl) (edn/read-string form))
+  (try
+    (when-let [passed-eval (eval (edn/read-string form))]
+      (let [prepl-reader     (partial read (:reader repl))
+            edn-form         (edn/read-string form)]
+        (send-code (:writer repl) edn-form)
 
-    (if-let [result (prepl-reader)]
-      (do
-        (println "shared-eval result" result)
-        ; TODO ... use core.async to prevent blocking in this loop thereby have the chance to provide intermediate results
-        ; TODO ... work out the right way to cancel a command after code has been sent to the REPL
-        (loop [results [result]]
-          (if (= :ret (:tag (last results)))
-            results
-            (recur (conj results (prepl-reader))))))
-      (println "shared-eval - no results. Input form: " form))))
+        (if-let [result (prepl-reader)]
+          (loop [results [result]]
+            (if (= :ret (:tag (last results)))
+              results
+              (recur (conj results (prepl-reader)))))
+          {:ex (str "Shared-eval - no results. Input form: " form)})))
+
+    (catch Exception e {:ex (pr-str e)})))
 
 (defn reptile-valf
   "The prepl default for :valf is `pr-str`, instead here we return values"

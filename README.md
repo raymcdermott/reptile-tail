@@ -44,16 +44,16 @@ The first version will be considered feature complete once the server provides
 - [X] Shared REPL history
 - [X] Authentication using shared secret
 - [X] Dynamic addition of new libraries to the REPL
-- [ ] Incremental feedback on long running REPL evaluations
-- [ ] Cancel long running REPL evaluations
+- [ ] Documentation to explain client / server hosting options
 - [ ] Limit user count (2, 3, 4, etc...)
 - [ ] Limit users based on user names (jane, joe, mary, etc...)
-- [ ] Documentation to explain client / server hosting options
   
 ## Planned features
 
 After the initial version these additional features are planned
 
+- [ ] Incremental feedback on long running REPL evaluations
+- [ ] Cancel long running REPL evaluations
 - [ ] Choice of Java / node runtime REPLs
 - [ ] Investigate GraalVM
 

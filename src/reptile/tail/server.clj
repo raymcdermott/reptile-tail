@@ -77,14 +77,15 @@
 
 (defmethod -event-msg-handler :reptile/repl
   [{:keys [?data]}]
-  (let [
-        prepl      (or @shared-repl (reset! shared-repl (repl/shared-prepl @repl-socket)))
-        input-form (:form ?data)
-        response   {:prepl-response (repl/shared-eval prepl input-form)}]
+  (when-let [prepl (or @shared-repl (reset! shared-repl (repl/shared-prepl @repl-socket)))]
+    (let [input-form (:form ?data)
+          response   {:prepl-response (repl/shared-eval prepl input-form)}]
 
-    ;; Send the results to everyone
-    (doseq [uid (:any @connected-uids)]
-      (chsk-send! uid [:fast-push/eval (merge ?data response)]))))
+      (println ":reptile/repl - response" response)
+
+      ;; Send the results to everyone
+      (doseq [uid (:any @connected-uids)]
+        (chsk-send! uid [:fast-push/eval (merge ?data response)])))))
 
 (defn shutdown-repl
   [repl]

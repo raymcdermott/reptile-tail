@@ -25,17 +25,17 @@
 (defn shared-eval
   [repl form]
   (try
-    (when-let [passed-eval (eval (edn/read-string form))]
-      (let [prepl-reader     (partial read (:reader repl))
-            edn-form         (edn/read-string form)]
-        (send-code (:writer repl) edn-form)
+    (let [eval-ok!     (eval (edn/read-string form))
+          prepl-reader (partial read (:reader repl))
+          edn-form     (edn/read-string form)]
+      (send-code (:writer repl) edn-form)
 
-        (if-let [result (prepl-reader)]
-          (loop [results [result]]
-            (if (= :ret (:tag (last results)))
-              results
-              (recur (conj results (prepl-reader)))))
-          {:ex (str "Shared-eval - no results. Input form: " form)})))
+      (if-let [result (prepl-reader)]
+        (loop [results [result]]
+          (if (= :ret (:tag (last results)))
+            results
+            (recur (conj results (prepl-reader)))))
+        {:ex (str "Shared-eval - no results. Input form: " form)}))
 
     (catch Exception e {:ex (pr-str e)})))
 

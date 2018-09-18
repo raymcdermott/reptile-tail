@@ -29,11 +29,10 @@
             eval-result (first resp)]
         (is (= 2 (:val eval-result))))
 
-      ;(let [resp (repl/shared-eval prepl "foo")
-      ;      eval-result (first resp)]
-      ;  (is (and (= 1 (count resp)) (= :ret (:tag eval-result))))
-      ;  ; TODO - special case for strings .... but not at this end
-      ;  (is (= "foo" (:val eval-result))))
+      (let [resp (repl/shared-eval prepl "\"foo\"")
+            eval-result (first resp)]
+        (is (and (= 1 (count resp)) (= :ret (:tag eval-result))))
+        (is (= "foo" (:val eval-result))))
 
       (let [resp        (repl/shared-eval prepl "(range 2)")
             eval-result (first resp)]

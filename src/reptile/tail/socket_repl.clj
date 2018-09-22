@@ -1,5 +1,6 @@
 (ns reptile.tail.socket-repl
   (:require [clojure.java.io :as io]
+            [clojure.tools.reader.reader-types :as reader-types]
             [clojure.tools.reader.edn :as edn]
             [clojure.core.server :as clj-server])
   (:import (java.net Socket ServerSocket)
@@ -22,12 +23,25 @@
         server-writer (OutputStreamWriter. (io/output-stream client))]
     [server-reader server-writer]))
 
-(defn shared-eval
+(defn read-forms
+  "Read the string in the REPL buffer to obtain all forms (rather than just the first)"
+  [repl-forms]
+  (let [pbr      (reader-types/string-push-back-reader repl-forms)
+        sentinel ::eof]
+    (loop [data-read (clojure.tools.reader/read {:eof sentinel} pbr)
+           result    []]
+      (if (= data-read sentinel)
+        result
+        (recur (clojure.tools.reader/read {:eof sentinel} pbr)
+               (conj result (pr-str data-read)))))))
+
+; TODO use :eof reader property to indicate EOF issues rather than exception
+(defn shared-multi
   [repl form]
   (try
-    (let [eval-ok!     (eval (edn/read-string form))
+    (let [eval-ok!     (eval (read-string form))
           prepl-reader (partial read (:reader repl))
-          edn-form     (edn/read-string form)]
+          edn-form     (read-string form)]
       (send-code (:writer repl) edn-form)
 
       (if-let [result (prepl-reader)]
@@ -37,7 +51,16 @@
             (recur (conj results (prepl-reader)))))
         {:ex (str "Shared-eval - no results. Input form: " form)}))
 
-    (catch Exception e {:ex (pr-str e)})))
+    (catch Exception e (if (= (.getMessage e) "EOF while reading")
+                         [{:form form :ms 0 :ns "user" :tag :ret :val "" :empty-source "shared-multi"}]
+                         {:ex (pr-str e)}))))
+
+(defn shared-eval
+  [repl forms]
+  (let [expanded-forms (read-forms forms)]
+    (if (empty? expanded-forms)
+      [{:form forms :ms 0 :ns "user" :tag :ret :val "" :empty-source "shared-eval"}]
+      (flatten (map (partial shared-multi repl) expanded-forms)))))
 
 (defn reptile-valf
   "The prepl default for :valf is `pr-str`, instead here we return values"

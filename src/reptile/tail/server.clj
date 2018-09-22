@@ -90,7 +90,6 @@
 (defn shutdown-repl
   [repl]
   ;; TODO eventually shutdown the incoming REPL, now just shut all
-
   )
 
 ;;;;;;;;;;; LOGIN

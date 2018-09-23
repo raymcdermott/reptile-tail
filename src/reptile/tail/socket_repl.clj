@@ -9,34 +9,24 @@
 
 (defn send-code
   [code-writer clj-code]
-  (binding [*out* code-writer *flush-on-newline* true]
+  (binding [*out* code-writer
+            *flush-on-newline* true]
     (prn clj-code)))
 
 ;; TODO ... poll server and enable reconnection
 (defn prepl-client
   "Attaching the PREPL to a given `host` and `port`"
   [host port]
-  (println "prepl-client host" host "port" port)
   (let [host          (if (= :self host) "localhost" host)
         client        (Socket. ^String host ^Integer port)
         server-reader (LineNumberingPushbackReader. (io/reader client))
         server-writer (OutputStreamWriter. (io/output-stream client))]
     [server-reader server-writer]))
 
-(defn read-forms
-  "Read the string in the REPL buffer to obtain all forms (rather than just the first)"
-  [repl-forms]
-  (let [pbr      (reader-types/string-push-back-reader repl-forms)
-        sentinel ::eof]
-    (loop [data-read (clojure.tools.reader/read {:eof sentinel} pbr)
-           result    []]
-      (if (= data-read sentinel)
-        result
-        (recur (clojure.tools.reader/read {:eof sentinel} pbr)
-               (conj result (pr-str data-read)))))))
-
 ; TODO use :eof reader property to indicate EOF issues rather than exception
-(defn shared-multi
+; TODO use spec to verify the :reader / :writer keys are present on the passed repl
+(defn process-form
+  "Check the validity of the form and evaluate it using the given `repl`"
   [repl form]
   (try
     (let [eval-ok!     (eval (read-string form))
@@ -52,15 +42,29 @@
         {:ex (str "Shared-eval - no results. Input form: " form)}))
 
     (catch Exception e (if (= (.getMessage e) "EOF while reading")
-                         [{:form form :ms 0 :ns "user" :tag :ret :val "" :empty-source "shared-multi"}]
+                         [{:form form :ms 0 :ns "user" :tag :ret
+                           :val "" :empty-source "shared-multi"}]
                          {:ex (pr-str e)}))))
 
+(defn read-forms
+  "Read the string in the REPL buffer to obtain all forms (rather than just the first)"
+  [repl-forms]
+  (let [pbr      (reader-types/string-push-back-reader repl-forms)
+        sentinel ::eof]
+    (loop [data-read (clojure.tools.reader/read {:eof sentinel} pbr)
+           result    []]
+      (if (= data-read sentinel)
+        result
+        (recur (clojure.tools.reader/read {:eof sentinel} pbr)
+               (conj result (pr-str data-read)))))))
+
 (defn shared-eval
-  [repl forms]
-  (let [expanded-forms (read-forms forms)]
+  "Evaluate the form(s) provided in the string `forms-str` using the given `repl`"
+  [repl forms-str]
+  (let [expanded-forms (read-forms forms-str)]
     (if (empty? expanded-forms)
-      [{:form forms :ms 0 :ns "user" :tag :ret :val "" :empty-source "shared-eval"}]
-      (flatten (map (partial shared-multi repl) expanded-forms)))))
+      [{:form forms-str :ms 0 :ns "user" :tag :ret :val "" :empty-source "shared-eval"}]
+      (flatten (map (partial process-form repl) expanded-forms)))))
 
 (defn reptile-valf
   "The prepl default for :valf is `pr-str`, instead here we return values"

@@ -1,8 +1,10 @@
-# REPtiLe server library
+# REPtiLe server CLI
 
-A Clojure server designed to expose a shared PREPL
+A Clojure CLI to the REPtiLe server to expose a shared PREPL
 
-See the sister project [reptile-tongue](https://github.com/raymcdermott/reptile-tongue) - a browser based client for 
+The CLI depends on the the server lib [reptile-lib](https://github.com/raymcdermott/reptile-tongue) - a server that can be started in various contexts for example the dev env or the CLI.
+
+I have a sister UI project [reptile-tongue](https://github.com/raymcdermott/reptile-tongue) - a browser based client for 
 REPtiLe.
 
 ## Usage - standalone mode

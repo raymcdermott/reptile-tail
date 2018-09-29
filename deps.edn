@@ -1,25 +1,6 @@
-{:deps    {clojure-complete             {:mvn/version "0.2.4" :exclusions [[org.clojure/clojure]]}
-           org.clojure/tools.nrepl      {:mvn/version "0.2.12" :exclusions [[org.clojure/clojure]]}
-           org.clojure/clojure          {:mvn/version "1.10.0-alpha8"}
-           org.clojure/core.async       {:mvn/version "0.4.474"}
-           org.clojure/tools.logging    {:mvn/version "0.4.0"}
-           aleph                        {:mvn/version "0.4.4"}
-           gloss                        {:mvn/version "0.2.6"}
-           compojure                    {:mvn/version "1.6.0"}
-           com.taoensso/sente           {:mvn/version "1.12.0"}
-           com.taoensso/timbre          {:mvn/version "4.10.0"}
-           ring                         {:mvn/version "1.6.3"}
-           ring/ring-defaults           {:mvn/version "0.3.1"}
-           com.cognitect/transit-clj    {:mvn/version "0.8.300"}
-           com.cognitect/transit-cljs   {:mvn/version "0.8.243"}
-           org.clojure/tools.deps.alpha {:git/url "https://github.com/clojure/tools.deps.alpha.git"
-                                         :sha     "d492e97259c013ba401c5238842cd3445839d020"}}
- :aliases {:test    {:extra-paths ["test"]
-                     :extra-deps
-                                  {com.cognitect/test-runner {:git/url "git@github.com:cognitect-labs/test-runner"
-                                                              :sha     "5f2b5c2efb444df76fb5252102b33f542ebf7f58"}}
-                     :main-opts   ["-m" "cognitect.test-runner"]}
-           :reptile {:main-opts ["-m" "reptile.tail.server"]}}}
+{:deps    {org.clojure/clojure {:mvn/version "1.10.0-alpha8"}
+           reptile-server      {:local/root "/Users/ray/dev/reptile/reptile-lib"}}
+ :aliases {:reptile {:main-opts ["-m" "reptile.tail.server"]}}}
 
 
 

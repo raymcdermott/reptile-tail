@@ -1,6 +1,9 @@
 {:deps    {org.clojure/clojure {:mvn/version "1.10.0-alpha8"}
-           reptile-server      {:local/root "/Users/ray/dev/reptile/reptile-lib"}}
+           reptile-server      {:git/url "https://github.com/raymcdermott/reptile-body.git"
+                                :sha     "9e6e56a82c73bb01fc8d8a3220cc21432a81dff3"}}
  :aliases {:reptile {:main-opts ["-m" "reptile.tail.server"]}}}
+
+
 
 
 

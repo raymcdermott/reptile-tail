@@ -1,6 +1,6 @@
-{:deps    {org.clojure/clojure {:mvn/version "1.10.0-alpha8"}
+{:deps    {org.clojure/clojure {:mvn/version "1.10.0-RC5"}
            reptile/body        {:git/url "https://github.com/raymcdermott/reptile-body.git"
-                                :sha     "a033cb09abbbbacdc00ebb60fbcd8a8673c21b69"}}
+                                :sha     "7135afe4689f587b2db76398cbf363862d24548c"}}
  :aliases {:reptile {:main-opts ["-m" "reptile.tail.server"]}}}
 
 
